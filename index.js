@@ -29,6 +29,33 @@ async function run() {
         // Send a ping to confirm a successful connection
         await client.db("admin").command({ ping: 1 });
         console.log("Pinged your deployment. You successfully connected to MongoDB!");
+        const biosCollention = await client.db("loveLink").collection("bios");
+
+        app.get("/bios", async (req, res) => {
+            const result = await biosCollention.find().toArray();
+            res.send(result)
+        })
+
+        app.post("/bios", async (req, res) => {
+            const body = req.body;
+            const filter = {
+                email: body.email,
+            }
+            const existingBio = await biosCollention.findOne(filter);
+            let result;
+            if (existingBio) {
+                result = await biosCollention.updateOne(
+                    {email: body.email},
+                    {$set: {...body}}
+                )
+            } else {
+                const lastBio = await biosCollention.find().sort({ bio_id: -1 }).limit(1).toArray();
+                const lastId = lastBio.length > 0 ? lastBio[0].bio_id + 1 : 0;
+                body.bio_id = lastId;
+                result = biosCollention.insertOne(body);
+            }
+            res.send(result)
+        })
     } finally {
         // Ensures that the client will close when you finish/error
         //   await client.close();
