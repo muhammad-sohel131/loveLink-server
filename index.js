@@ -56,6 +56,16 @@ async function run() {
             }
             res.send(result)
         })
+
+        app.get('/bios/:email', async(req, res) => {
+            const filter = {
+                email: req.params.email
+            }
+            console.log(filter)
+            const result = await biosCollention.findOne(filter);
+            console.log(result)
+            res.send(result)
+        })
     } finally {
         // Ensures that the client will close when you finish/error
         //   await client.close();
