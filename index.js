@@ -31,6 +31,14 @@ async function run() {
         console.log("Pinged your deployment. You successfully connected to MongoDB!");
         const biosCollention = await client.db("loveLink").collection("bios");
         const premiumBioCollection = await client.db("loveLink").collection("premiumBio");
+        app.get("/premiumProfiles", async(req, res) => {
+            try{
+                const profiles = await biosCollention.find({isPremium: true}).limit(6).toArray();
+                res.send(profiles)
+            }catch(err){
+                res.status(500).send({message: err.message})
+            }
+        })
 
         app.get("/premiumBios", async(req, res) => {
             const result = await premiumBioCollection.find().toArray();
