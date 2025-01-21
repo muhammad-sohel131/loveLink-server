@@ -86,6 +86,19 @@ async function run() {
                 res.status(500).send({ error: error.message });
             }
         });
+
+        app.put("/makeAdmin/:id", async (req, res) => {
+            try {
+                const result = await biosCollention.updateOne(
+                    { bio_id: +req.params.id },  
+                    { $set: { isAdmin: true } } 
+                );
+                res.send(result);
+            } catch (error) {
+                console.log(error)
+                res.status(500).send({ error: error.message });
+            }
+        });
         
         app.get('/bios/:email', async(req, res) => {
             const filter = {
