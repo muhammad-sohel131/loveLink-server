@@ -30,6 +30,24 @@ async function run() {
         await client.db("admin").command({ ping: 1 });
         console.log("Pinged your deployment. You successfully connected to MongoDB!");
         const biosCollention = await client.db("loveLink").collection("bios");
+        const premiumBioCollection = await client.db("loveLink").collection("premiumBio");
+
+        app.get("/premiumBios", async(req, res) => {
+            const result = await premiumBioCollection.find().toArray();
+            res.send(result)
+        })
+        app.delete("/premiumBios/:id", async(req, res) => {
+            try{
+                const result = await premiumBioCollection.deleteOne({bio_id: +req.params.id})
+                res.send(result)
+            }catch(error){
+                res.status(500).send({ error: error.message });
+            }
+        })
+        app.post("/premiumBios", async(req, res) => {
+            const result = await premiumBioCollection.insertOne(req.body);
+            res.send(result);
+        })
 
         app.get("/bios", async (req, res) => {
             const result = await biosCollention.find().toArray();
@@ -56,14 +74,24 @@ async function run() {
             }
             res.send(result)
         })
-
+        app.put("/makePremium/:id", async (req, res) => {
+            try {
+                const result = await biosCollention.updateOne(
+                    { bio_id: +req.params.id },  
+                    { $set: { isPremium: true } } 
+                );
+                res.send(result);
+            } catch (error) {
+                console.log(error)
+                res.status(500).send({ error: error.message });
+            }
+        });
+        
         app.get('/bios/:email', async(req, res) => {
             const filter = {
                 email: req.params.email
             }
-            console.log(filter)
             const result = await biosCollention.findOne(filter);
-            console.log(result)
             res.send(result)
         })
     } finally {
