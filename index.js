@@ -31,6 +31,8 @@ async function run() {
         console.log("Pinged your deployment. You successfully connected to MongoDB!");
         const biosCollention = await client.db("loveLink").collection("bios");
         const premiumBioCollection = await client.db("loveLink").collection("premiumBio");
+        const favouritesBioCollection = await client.db("loveLink").collection("favouriteBios")
+       
         app.get("/premiumProfiles", async(req, res) => {
             try{
                 const profiles = await biosCollention.find({isPremium: true}).limit(6).toArray();
@@ -114,6 +116,32 @@ async function run() {
             }
             const result = await biosCollention.findOne(filter);
             res.send(result)
+        })
+
+        app.post("/favourites", async(req, res) => {
+            try{
+                const result = favouritesBioCollection.insertOne(req.body);
+                res.send(result)
+            }catch(err){
+                res.status(500).send({message: err.message})
+            }
+        })
+        app.delete("/favourites/:id", async(req, res)=> {
+            try{
+                const result = await favouritesBioCollection.deleteOne({bio_id : parseInt(req.params.id)})
+                res.send(result)
+            }catch(err){
+                res.status(500).send({message: err.message})
+            }
+        })
+        app.get("/favourites/:email", async (req, res) => {
+            try{
+                const email = req.params.email;
+                const result = await favouritesBioCollection.find({author_email: email}).toArray();
+                res.send(result);
+            }catch(err){
+                res.status(500).send({message: err.message})
+            }
         })
     } finally {
         // Ensures that the client will close when you finish/error
