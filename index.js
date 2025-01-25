@@ -159,14 +159,14 @@ async function run() {
             res.send(result)
         })
         app.get('/contact-requests', verifyToken, async (req, res) => {
-            const { status, email } = req.query; 
+            const { status, auth_email } = req.query; 
             const filter = {};
         
             if (status) {
                 filter.status = status;
             }
-            if (email) {
-                filter.email = email;
+            if (auth_email) {
+                filter.auth_email = auth_email;
             }
         
             try {
