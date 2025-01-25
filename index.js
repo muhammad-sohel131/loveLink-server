@@ -35,6 +35,38 @@ async function run() {
         const favouritesBioCollection = await client.db("loveLink").collection("favouriteBios")
         const contactRequestCollection = await client.db("loveLink").collection("contact-requests")
        
+
+        // json web token api
+        app.post('/jwt', async (req, res) => {
+            const user = req.body;
+            const token = jwt.sign(user, process.env.ACCESS_TOKEN_SECRET, { expiresIn: '1h' });
+            res.send({ token });
+          })
+      
+          const verifyToken = (req, res, next) => {
+            // console.log('inside verify token', req.headers.authorization);
+            if (!req.headers.authorization) {
+              return res.status(401).send({ message: 'unauthorized access' });
+            }
+            const token = req.headers.authorization.split(' ')[1];
+            jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, (err, decoded) => {
+              if (err) {
+                return res.status(401).send({ message: 'unauthorized access' })
+              }
+              req.decoded = decoded;
+              next();
+            })
+          }
+          const verifyAdmin = async (req, res, next) => {
+            const email = req.decoded.email;
+            const query = { email: email };
+            const user = await userCollection.findOne(query);
+            const isAdmin = user?.isAdmin;
+            if (!isAdmin) {
+              return res.status(403).send({ message: 'forbidden access' });
+            }
+            next();
+          }
         app.get("/premiumProfiles", async(req, res) => {
             try{
                 const profiles = await biosCollention.find({isPremium: true}).limit(6).toArray();
@@ -44,11 +76,11 @@ async function run() {
             }
         })
 
-        app.get("/premiumBios", async(req, res) => {
+        app.get("/premiumBios", verifyToken, async(req, res) => {
             const result = await premiumBioCollection.find().toArray();
             res.send(result)
         })
-        app.delete("/premiumBios/:id", async(req, res) => {
+        app.delete("/premiumBios/:id", verifyToken, async(req, res) => {
             try{
                 const result = await premiumBioCollection.deleteOne({bio_id: +req.params.id})
                 res.send(result)
@@ -56,7 +88,7 @@ async function run() {
                 res.status(500).send({ error: error.message });
             }
         })
-        app.post("/premiumBios", async(req, res) => {
+        app.post("/premiumBios", verifyToken, async(req, res) => {
             const result = await premiumBioCollection.insertOne(req.body);
             res.send(result);
         })
@@ -66,7 +98,7 @@ async function run() {
             res.send(result)
         })
 
-        app.post("/bios", async (req, res) => {
+        app.post("/bios", verifyToken, async (req, res) => {
             const body = req.body;
             const filter = {
                 email: body.email,
@@ -86,7 +118,7 @@ async function run() {
             }
             res.send(result)
         })
-        app.put("/makePremium/:id", async (req, res) => {
+        app.put("/makePremium/:id", verifyToken, async (req, res) => {
             try {
                 const result = await biosCollention.updateOne(
                     { bio_id: +req.params.id },  
@@ -99,7 +131,7 @@ async function run() {
             }
         });
 
-        app.put("/makeAdmin/:id", async (req, res) => {
+        app.put("/makeAdmin/:id", verifyToken, async (req, res) => {
             try {
                 const result = await biosCollention.updateOne(
                     { bio_id: +req.params.id },  
@@ -112,21 +144,21 @@ async function run() {
             }
         });
         
-        app.get('/bios/:email', async(req, res) => {
+        app.get('/bios/:email', verifyToken, async(req, res) => {
             const filter = {
                 email: req.params.email
             }
             const result = await biosCollention.findOne(filter);
             res.send(result)
         })
-        app.get('/biosId/:id', async(req, res) => {
+        app.get('/biosId/:id', verifyToken, async(req, res) => {
             const filter = {
                 bio_id: parseInt(req.params.id)
             }
             const result = await biosCollention.findOne(filter);
             res.send(result)
         })
-        app.get('/contact-requests', async (req, res) => {
+        app.get('/contact-requests', verifyToken, async (req, res) => {
             const { status, email } = req.query; 
             const filter = {};
         
@@ -146,7 +178,7 @@ async function run() {
         });
         
 
-        app.post('/contact-requests', async(req, res) => {
+        app.post('/contact-requests', verifyToken, async(req, res) => {
            try{
             const result = contactRequestCollection.insertOne(req.body);
             res.send(result)
@@ -155,7 +187,7 @@ async function run() {
            }
 
         })
-        app.put('/contact-requests', async (req, res) => {
+        app.put('/contact-requests', verifyToken, async (req, res) => {
             const { bio_id, author_email } = req.query; 
         
             try {
@@ -173,7 +205,7 @@ async function run() {
                 res.status(500).send({ message: err.message });
             }
         });
-        app.delete('/contact-requests', async(req, res) => {
+        app.delete('/contact-requests', verifyToken, async(req, res) => {
             const { bio_id, author_email } = req.query; 
             try{
                 const filter = {
@@ -187,7 +219,7 @@ async function run() {
                 res.status(500).send({message: err.message})
             }
         })
-        app.post("/favourites", async(req, res) => {
+        app.post("/favourites", verifyToken, async(req, res) => {
             try{
                 const result = favouritesBioCollection.insertOne(req.body);
                 res.send(result)
@@ -195,16 +227,20 @@ async function run() {
                 res.status(500).send({message: err.message})
             }
         })
-        app.delete("/favourites/:id", async(req, res)=> {
+        app.delete("/favourites", verifyToken, async(req, res)=> {
+            const {bio_id, auth_email} = req.query;
+            const filter = {
+                bio_id : parseInt(bio_id), 
+                author_email: auth_email
+            }
             try{
-                const email = "moriam@gmail.com"
-                const result = await favouritesBioCollection.deleteOne({bio_id : parseInt(req.params.id), author_email: email})
+                const result = await favouritesBioCollection.deleteOne(filter)
                 res.send(result)
             }catch(err){
                 res.status(500).send({message: err.message})
             }
         })
-        app.get("/favourites/:email", async (req, res) => {
+        app.get("/favourites/:email", verifyToken, async (req, res) => {
             try{
                 const email = req.params.email;
                 const result = await favouritesBioCollection.find({author_email: email}).toArray();
@@ -216,7 +252,7 @@ async function run() {
 
 
         // paymentIntent
-        app.post('/create-payment-intent', async(req, res) => {
+        app.post('/create-payment-intent', verifyToken, async(req, res) => {
             const { price } = req.body;
             const amount = parseInt(price * 100);
 
