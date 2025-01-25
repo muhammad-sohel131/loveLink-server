@@ -33,6 +33,7 @@ async function run() {
         const biosCollention = await client.db("loveLink").collection("bios");
         const premiumBioCollection = await client.db("loveLink").collection("premiumBio");
         const favouritesBioCollection = await client.db("loveLink").collection("favouriteBios")
+        const contactRequestCollection = await client.db("loveLink").collection("contact-requests")
        
         app.get("/premiumProfiles", async(req, res) => {
             try{
@@ -118,7 +119,74 @@ async function run() {
             const result = await biosCollention.findOne(filter);
             res.send(result)
         })
+        app.get('/biosId/:id', async(req, res) => {
+            const filter = {
+                bio_id: parseInt(req.params.id)
+            }
+            const result = await biosCollention.findOne(filter);
+            res.send(result)
+        })
+        app.get('/contact-requests', async (req, res) => {
+            const { status, email } = req.query; 
+            const filter = {};
+        
+            if (status) {
+                filter.status = status;
+            }
+            if (email) {
+                filter.email = email;
+            }
+        
+            try {
+                const result = await contactRequestCollection.find(filter).toArray();
+                res.send(result);
+            } catch (err) {
+                res.status(500).send({ message: err.message });
+            }
+        });
+        
 
+        app.post('/contact-requests', async(req, res) => {
+           try{
+            const result = contactRequestCollection.insertOne(req.body);
+            res.send(result)
+           }catch(err) {
+            res.status(500).send({message: err.message})
+           }
+
+        })
+        app.put('/contact-requests', async (req, res) => {
+            const { bio_id, author_email } = req.query; 
+        
+            try {
+                const filter = { bio_id: parseInt(bio_id), author_email: author_email }; 
+                const updateDoc = { $set: { status : 'Approved' } };
+        
+                const result = await contactRequestCollection.updateOne(filter, updateDoc);
+        
+                if (result.modifiedCount === 0) {
+                    return res.status(404).send({ message: "No contact request found or status is the same" });
+                }
+        
+                res.send({ message: "Status updated successfully", result });
+            } catch (err) {
+                res.status(500).send({ message: err.message });
+            }
+        });
+        app.delete('/contact-requests', async(req, res) => {
+            const { bio_id, author_email } = req.query; 
+            try{
+                const filter = {
+                    bio_id : parseInt(bio_id),
+                    author_email
+                }
+                const result = await contactRequestCollection.deleteOne(filter)
+                res.send(result)
+            }catch(err){
+                console.log(err)
+                res.status(500).send({message: err.message})
+            }
+        })
         app.post("/favourites", async(req, res) => {
             try{
                 const result = favouritesBioCollection.insertOne(req.body);
