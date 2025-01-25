@@ -11,6 +11,7 @@ const port = process.env.PORT || 5000;
 const dbUser = process.env.dbUser
 const dbPsrd = process.env.dbPswrd
 
+const stripe = require('stripe')(process.env.Stripe_secret_key);
 const { MongoClient, ServerApiVersion } = require('mongodb');
 const uri = `mongodb+srv://${dbUser}:${dbPsrd}@cluster0.jd7el.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0`;
 
@@ -128,7 +129,8 @@ async function run() {
         })
         app.delete("/favourites/:id", async(req, res)=> {
             try{
-                const result = await favouritesBioCollection.deleteOne({bio_id : parseInt(req.params.id)})
+                const email = "moriam@gmail.com"
+                const result = await favouritesBioCollection.deleteOne({bio_id : parseInt(req.params.id), author_email: email})
                 res.send(result)
             }catch(err){
                 res.status(500).send({message: err.message})
@@ -142,6 +144,22 @@ async function run() {
             }catch(err){
                 res.status(500).send({message: err.message})
             }
+        })
+
+
+        // paymentIntent
+        app.post('/create-payment-intent', async(req, res) => {
+            const { price } = req.body;
+            const amount = parseInt(price * 100);
+
+            const paymentIntent = await stripe.paymentIntents.create({
+                amount: amount,
+                currency: 'USD',
+                payment_method_types: ['card']
+            })
+            res.send({
+                clientSecret: paymentIntent.client_secret
+            })
         })
     } finally {
         // Ensures that the client will close when you finish/error
