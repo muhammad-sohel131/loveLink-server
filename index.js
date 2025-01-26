@@ -266,6 +266,24 @@ async function run() {
                 res.status(500).send({message: err.message})
             }
         })
+        app.get("/biodataStats", async (req, res) => {
+            try {
+                const totalBiodata = await biosCollention.countDocuments();
+                const totalBoys = await biosCollention.countDocuments({ gender: "Male" });
+                const totalGirls = await biosCollention.countDocuments({ gender: "Female" });
+                const totalMarriages = await marriedCollection.countDocuments();
+        
+                res.json({
+                    totalBiodata,
+                    totalBoys,
+                    totalGirls,
+                    totalMarriages
+                });
+            } catch (error) {
+                console.error("Error fetching stats:", error);
+                res.status(500).json({ message: "Server error" });
+            }
+    })
         // paymentIntent
         app.post('/create-payment-intent', verifyToken, async (req, res) => {
             const { price } = req.body;
