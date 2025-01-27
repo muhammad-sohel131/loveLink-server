@@ -60,7 +60,7 @@ async function run() {
         const verifyAdmin = async (req, res, next) => {
             const email = req.decoded.email;
             const query = { email: email };
-            const user = await userCollection.findOne(query);
+            const user = await biosCollention.findOne(query);
             const isAdmin = user?.isAdmin;
             if (!isAdmin) {
                 return res.status(403).send({ message: 'forbidden access' });
@@ -96,7 +96,7 @@ async function run() {
         app.get("/bios", async (req, res) => {
             try {
                 const page = parseInt(req.query.page) || 1;  
-                const limit = parseInt(req.query.limit) || 10;
+                const limit = parseInt(req.query.limit) || 100;
                 const skip = (page - 1) * limit;  
         
                 const total = await biosCollention.countDocuments();
@@ -135,7 +135,7 @@ async function run() {
             }
             res.send(result)
         })
-        app.put("/makePremium/:id", verifyToken, async (req, res) => {
+        app.put("/makePremium/:id", verifyToken, verifyAdmin, async (req, res) => {
             try {
                 const result = await biosCollention.updateOne(
                     { bio_id: +req.params.id },
@@ -148,7 +148,7 @@ async function run() {
             }
         });
 
-        app.put("/makeAdmin/:id", verifyToken, async (req, res) => {
+        app.put("/makeAdmin/:id", verifyToken, verifyAdmin, async (req, res) => {
             try {
                 const result = await biosCollention.updateOne(
                     { bio_id: +req.params.id },
@@ -204,7 +204,7 @@ async function run() {
             }
 
         })
-        app.put('/contact-requests', verifyToken, async (req, res) => {
+        app.put('/contact-requests', verifyToken, verifyAdmin, async (req, res) => {
             const { bio_id, author_email } = req.query;
 
             try {
