@@ -94,9 +94,26 @@ async function run() {
         })
 
         app.get("/bios", async (req, res) => {
-            const result = await biosCollention.find().toArray();
-            res.send(result)
-        })
+            try {
+                const page = parseInt(req.query.page) || 1;  
+                const limit = parseInt(req.query.limit) || 10;
+                const skip = (page - 1) * limit;  
+        
+                const total = await biosCollention.countDocuments();
+                const result = await biosCollention.find().skip(skip).limit(limit).toArray();
+        
+                res.send({
+                    total,
+                    page,
+                    limit,
+                    totalPages: Math.ceil(total / limit),
+                    biodatas: result
+                });
+            } catch (error) {
+                res.status(500).send({ message: "Server Error", error });
+            }
+        });
+        
 
         app.post("/bios", async (req, res) => {
             const body = req.body;
